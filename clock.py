@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.spatial import distance as dist
-from imutils import perspective
 from imutils import contours
 import imutils
 import colors
