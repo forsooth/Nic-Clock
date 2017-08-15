@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
-from scipy.spatial import distance as dist
 from imutils import contours
 import imutils
+import math
 import colors
 import err
 
@@ -11,6 +11,13 @@ import err
 # Find the midpoint between two points (average the X and Y)
 def midpoint(ptA, ptB):
         return ((ptA[0] + ptB[0]) * 0.5, (ptA[1] + ptB[1]) * 0.5)
+
+def dist(ptA, ptB):
+        x1, y1 = ptA
+        x2, y2 = ptB
+        dx = x1 - x2
+        dy = y1 - y2
+        return math.sqrt(dx * dx + dy * dy)
 
 
 def main(img_file):
@@ -123,8 +130,8 @@ def draw_boxes(img, dilated, cnts, width, height):
                  
                 # compute the Euclidean distance between the midpoints
                 # to get the edge lengths
-                h = dist.euclidean((tltrX, tltrY), (blbrX, blbrY))
-                w = dist.euclidean((tlblX, tlblY), (trbrX, trbrY))
+                h = dist((tltrX, tltrY), (blbrX, blbrY))
+                w = dist((tlblX, tlblY), (trbrX, trbrY))
 
                 # get the extreme left/right/top/bottom points
                 leftmost = tuple(c[c[:,:,0].argmin()][0])
