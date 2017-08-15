@@ -24,7 +24,7 @@ def main(img_file):
 
         # Upper and lower bounds for colors used in thresholding
         boundaries = [
-                ([0, 50, 50], [100, 250, 250])
+                ([0, 100, 100], [80, 250, 220])
         ]
 
         b0 = '#' + ''.join(map(lambda x: hex(x), boundaries[0][0])).replace('0x', '')
