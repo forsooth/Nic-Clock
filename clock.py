@@ -24,7 +24,7 @@ def main(img_file):
 
         # Upper and lower bounds for colors used in thresholding
         boundaries = [
-                ([150, 30, 30], [200, 165, 165])
+                ([0, 50, 50], [100, 250, 250])
         ]
 
         b0 = '#' + ''.join(map(lambda x: hex(x), boundaries[0][0])).replace('0x', '')
@@ -80,7 +80,7 @@ def edge_detect(img):
         edged = cv2.Canny(blurred, 50, 100)
 
         err.log("Dilating edges")
-        dilated = cv2.dilate(edged, None, iterations=1)
+        dilated = cv2.dilate(edged, None, iterations=5)
 
         return blurred, edged, dilated
 
@@ -106,7 +106,7 @@ def draw_boxes(img, dilated, cnts, width, height):
         for c in cnts:
                 # If the area contained in the contour is too small
                 # (smaller than a 10px by 20px area), ignore it
-                if cv2.contourArea(c) < 200:
+                if cv2.contourArea(c) < (0.025 * height) * (0.025 * width):
                         continue
 
                 # Find the bounding box of this contour
@@ -148,16 +148,16 @@ def draw_boxes(img, dilated, cnts, width, height):
                         text_color = (50, 50, 200)
                         sand_box = False
                 x, y = topmost
-                if y > height / 2 - 20:
+                if y > height / 2 - .05 * height:
                         err.log("Detected false contour at ({}, {}); discarded for topmost y value above {}".format(x, y, height / 2 - 20))
                         text_color = (50, 50, 200)
                         sand_box = False
-                if y < height / 2 - 250:
+                if y < height / 2 - 35 * height:
                         err.log("Detected false contour at ({}, {}); discarded for topmost y value below {}".format(x, y, height / 2 - 250))
                         text_color = (50, 50, 200)
                         sand_box = False
                 x, y = bottommost
-                if y > height / 2 + 30:
+                if y > height / 2 + 0.05 * height:
                         err.log("Detected false contour at ({}, {}); discarded for bottommost y value above {}".format(x, y, height / 2 + 30))
                         text_color = (50, 50, 200)
                         sand_box = False
@@ -171,14 +171,14 @@ def draw_boxes(img, dilated, cnts, width, height):
                 cv2.drawContours(dilated, [box.astype("int")], -1, text_color, 2)
 
                 # draw the object sizes on the image
-                cv2.putText(img, "{:.1f}px".format(h),
+                cv2.putText(img, "{:.1f}px".format(w),
                         (int(tltrX - 15), int(tltrY - 10)), cv2.FONT_HERSHEY_SIMPLEX,
                         0.65, text_color, 2)
                 cv2.putText(img, "{:.1f}px".format(h),
                         (int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
                         0.65, text_color, 2)
 
-                cv2.putText(dilated, "{:.1f}px".format(h),
+                cv2.putText(dilated, "{:.1f}px".format(w),
                         (int(tltrX - 15), int(tltrY - 10)), cv2.FONT_HERSHEY_SIMPLEX,
                         0.65, text_color, 2)
                 cv2.putText(dilated, "{:.1f}px".format(h),
@@ -187,4 +187,4 @@ def draw_boxes(img, dilated, cnts, width, height):
 
         return img, dilated, sand_h, sand_w
 
-main('g.jpg')
+main('img/test02.jpg')
