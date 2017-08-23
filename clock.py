@@ -10,59 +10,66 @@ import err
 
 # Find the midpoint between two points (average the X and Y)
 def midpoint(ptA, ptB):
-        return ((ptA[0] + ptB[0]) * 0.5, (ptA[1] + ptB[1]) * 0.5)
+        x1, y1 = ptA
+        x2, y2 = ptB
+        return ((x1 + x2) * 0.5, (y1 + y1) * 0.5)
+
 
 def dist(ptA, ptB):
         x1, y1 = ptA
         x2, y2 = ptB
         dx = x1 - x2
         dy = y1 - y2
-        return math.sqrt(dx * dx + dy * dy)
+        return math.sqrt(dx**2 + dy**2)
 
 
 def main(img_file):
         # Generate plot for drawing our figures
-        fig = plt.figure()
+        plt.figure()
         # Read the image fromm its file
         img = cv2.imread(img_file)
-        # Grab original image dimensions
+        # Grab original image dimensions`
         height, width, channels = img.shape
         err.log("Original image width: {} height: {}".format(width, height))
 
         # Upper and lower bounds for colors used in thresholding
-        boundaries = [
-                ([0, 100, 100], [80, 250, 220])
-        ]
+        boundaries = [([0, 100, 100], [80, 250, 220])]
 
-        b0 = '#' + ''.join(map(lambda x: hex(x), boundaries[0][0])).replace('0x', '')
-        b1 = '#' + ''.join(map(lambda x: hex(x), boundaries[0][1])).replace('0x', '')
-        err.log("Running threshold with lower limit {}, upper limit {}".format(b0, b1))
+        # Convert to hex codes for printing
+        b0 = '#' + ''.join(map(lambda x: hex(x),
+                               boundaries[0][0])).replace('0x', '')
+        b1 = '#' + ''.join(map(lambda x: hex(x),
+                               boundaries[0][1])).replace('0x', '')
+        err.log("Running threshold with lower limit {}, upper limit {}"
+                .format(b0, b1))
 
         threshed = threshold(img, boundaries)
 
-        ax1 = plt.subplot2grid((6, 4), (0, 0))
+        plt.subplot2grid((6, 4), (0, 0))
         plt.imshow(threshed)
 
         blurred, edged, dilated = edge_detect(threshed)
 
-        ax2 = plt.subplot2grid((6, 4), (0, 1))
+        plt.subplot2grid((6, 4), (0, 1))
         plt.imshow(blurred)
 
-        ax3 = plt.subplot2grid((6, 4), (0, 2))
+        plt.subplot2grid((6, 4), (0, 2))
         plt.imshow(edged)
 
-        ax4 = plt.subplot2grid((6, 4), (0, 3))
+        plt.subplot2grid((6, 4), (0, 3))
         plt.imshow(dilated)
 
         cnts = find_contours(dilated.copy())
 
-        img, dilated, sand_h, sand_w = draw_boxes(img, dilated.copy(), cnts, width, height)
-        print(colors.t_green + "Found width and height of sand: {}px by {}px".format(sand_h, sand_w))
+        img, dilated, sand_h, sand_w = draw_boxes(img, dilated.copy(),
+                                                  cnts, width, height)
+        print(colors.t_green + "Found width and height of sand: {}px by {}px"
+                               .format(sand_h, sand_w))
 
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        ax5 = plt.subplot2grid((6, 4), (2, 0), colspan=2, rowspan=5)
+        plt.subplot2grid((6, 4), (2, 0), colspan=2, rowspan=5)
         plt.imshow(dilated)
-        ax6 = plt.subplot2grid((6, 4), (2, 2), colspan=2, rowspan=5)
+        plt.subplot2grid((6, 4), (2, 2), colspan=2, rowspan=5)
         plt.imshow(img)
         plt.show()
 
@@ -110,6 +117,9 @@ def draw_boxes(img, dilated, cnts, width, height):
         sand_h = -1
         sand_w = -1
 
+        hh = height / 2
+        hw = width / 2
+
         for c in cnts:
                 # If the area contained in the contour is too small
                 # (smaller than a 10px by 20px area), ignore it
@@ -118,7 +128,11 @@ def draw_boxes(img, dilated, cnts, width, height):
 
                 # Find the bounding box of this contour
                 box = cv2.minAreaRect(c)
-                box = cv2.cv.BoxPoints(box) if imutils.is_cv2() else cv2.boxPoints(box)
+                if imutils.is_cv2():
+                        box = cv2.cv.BoxPoints(box)
+                else:
+                        box = cv2.boxPoints(box)
+
                 box = np.array(box, dtype="int")
 
                 # Find midpoints of the bounding box edges
@@ -127,17 +141,17 @@ def draw_boxes(img, dilated, cnts, width, height):
                 (blbrX, blbrY) = midpoint(bl, br)
                 (tlblX, tlblY) = midpoint(tl, bl)
                 (trbrX, trbrY) = midpoint(tr, br)
-                 
+
                 # compute the Euclidean distance between the midpoints
                 # to get the edge lengths
                 h = dist((tltrX, tltrY), (blbrX, blbrY))
                 w = dist((tlblX, tlblY), (trbrX, trbrY))
 
                 # get the extreme left/right/top/bottom points
-                leftmost = tuple(c[c[:,:,0].argmin()][0])
-                rightmost = tuple(c[c[:,:,0].argmax()][0])
-                topmost = tuple(c[c[:,:,1].argmin()][0])
-                bottommost = tuple(c[c[:,:,1].argmax()][0])
+                leftmost = tuple(c[c[:, :, 0].argmin()][0])
+                rightmost = tuple(c[c[:, :, 0].argmax()][0])
+                topmost = tuple(c[c[:, :, 1].argmin()][0])
+                bottommost = tuple(c[c[:, :, 1].argmax()][0])
 
                 text_color = (50, 200, 50)
                 sand_box = True
@@ -146,51 +160,75 @@ def draw_boxes(img, dilated, cnts, width, height):
                 # that they could be our sand, mark them differently
                 x, y = leftmost
                 if x > width / 2:
-                        err.log("Detected false contour at ({}, {}); discarded for leftmost x value above {}".format(x, y, width / 2))
+                        err.log("Detected false contour at " +
+                                "({}, {}); discarded for ".format(x, y) +
+                                "leftmost x value above {}".format(hw))
                         text_color = (50, 50, 200)
                         sand_box = False
+
                 x, y = rightmost
                 if x < width / 2:
-                        err.log("Detected false contour at ({}, {}); discarded for rightmost x value below {}".format(x, y, width / 2))
+                        err.log("Detected false contour at " +
+                                "({}, {}); discarded for ".format(x, y) +
+                                "rightmost x value below {}".format(hw))
                         text_color = (50, 50, 200)
                         sand_box = False
+
                 x, y = topmost
                 if y > height / 2 - .05 * height:
-                        err.log("Detected false contour at ({}, {}); discarded for topmost y value above {}".format(x, y, height / 2 - 20))
+                        err.log("Detected false contour at " +
+                                "({}, {}); discarded for ".format(x, y) +
+                                "topmost y value above {}".format(hh - 20))
                         text_color = (50, 50, 200)
                         sand_box = False
+
                 if y < height / 2 - 35 * height:
-                        err.log("Detected false contour at ({}, {}); discarded for topmost y value below {}".format(x, y, height / 2 - 250))
+                        err.log("Detected false contour at " +
+                                "({}, {}); discarded for ".format(x, y) +
+                                "topmost y value below {}".format(hh - 250))
                         text_color = (50, 50, 200)
                         sand_box = False
+
                 x, y = bottommost
                 if y > height / 2 + 0.05 * height:
-                        err.log("Detected false contour at ({}, {}); discarded for bottommost y value above {}".format(x, y, height / 2 + 30))
+                        err.log("Detected false contour at " +
+                                "({}, {}); discarded for ".format(x, y) +
+                                "bottommost y value above {}".format(hh + 30))
                         text_color = (50, 50, 200)
                         sand_box = False
 
-                if sand_box == True:
+                if sand_box is True:
                         sand_h = h
                         sand_w = w
-                        print(colors.t_green + "Found sand at ({}, {})".format(x, y))
+                        print(colors.t_green +
+                              "Found sand at ({}, {})".format(x, y))
 
-                cv2.drawContours(img, [box.astype("int")], -1, text_color, 2)
-                cv2.drawContours(dilated, [box.astype("int")], -1, text_color, 2)
+                cv2.drawContours(img, [box.astype("int")], -1,
+                                 text_color, 2)
+
+                cv2.drawContours(dilated, [box.astype("int")], -1,
+                                 text_color, 2)
 
                 # draw the object sizes on the image
                 cv2.putText(img, "{:.1f}px".format(w),
-                        (int(tltrX - 15), int(tltrY - 10)), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.65, text_color, 2)
+                            (int(tltrX - 15), int(tltrY - 10)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.65, text_color, 2)
+
                 cv2.putText(img, "{:.1f}px".format(h),
-                        (int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.65, text_color, 2)
+                            (int(trbrX + 10), int(trbrY)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.65, text_color, 2)
 
                 cv2.putText(dilated, "{:.1f}px".format(w),
-                        (int(tltrX - 15), int(tltrY - 10)), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.65, text_color, 2)
+                            (int(tltrX - 15), int(tltrY - 10)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.65, text_color, 2)
+
                 cv2.putText(dilated, "{:.1f}px".format(h),
-                        (int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.65, text_color, 2)
+                            (int(trbrX + 10), int(trbrY)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.65, text_color, 2)
 
         return img, dilated, sand_h, sand_w
 
