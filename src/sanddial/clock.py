@@ -65,8 +65,9 @@ def find_contours(img):
     return contours
 
 
-def draw_bbox(img, width, height, bbox):
+def draw_bbox(img, dims, bbox):
     overlay = img.copy()
+    width, height = dims
     cv2.rectangle(overlay, (0, 0), (width, bbox.bbt), (80, 0, 0), -1)
     cv2.rectangle(overlay, (0, 0), (bbox.bbl, height), (80, 0, 0), -1)
     cv2.rectangle(overlay, (bbox.bbr, 0), (width, height), (80, 0, 0), -1)
@@ -75,12 +76,28 @@ def draw_bbox(img, width, height, bbox):
     cv2.addWeighted(overlay, 0.25, img, 0.75, 0, img)
 
 
-def find_sand(img, dilated, contours, width, height, minarea, bbox):
+def oob(lftx, rgtx, topy, boty, bbox):
+    # If the extreme points are not positioned in a way
+    # that they could be our sand, mark them differently
+    if lftx < bbox.bbl:
+        return True
+    if rgtx > bbox.bbr:
+        return True
+    if topy < bbox.bbt:
+        return True
+    if boty > bbox.bbb:
+        return True
+    return False
+
+
+def find_sand(img, dilated, contours, dims, minarea, bbox):
     sand_h = 0
     sand_w = 0
 
-    sand_p1 = (width, height)
+    sand_p1 = dims
     sand_p2 = (0, 0)
+
+    draw_bbox(img, dims, bbox)
 
     for contour in contours:
         # If the area contained in the contour is too small
@@ -109,43 +126,9 @@ def find_sand(img, dilated, contours, width, height, minarea, bbox):
         boxh = boty - topy
         boxw = rgtx - lftx
 
-        text_color = (50, 200, 50)
         sand_box = True
 
-        topcolor = (50, 200, 50)
-        botcolor = (50, 200, 50)
-        lftcolor = (50, 200, 50)
-        rgtcolor = (50, 200, 50)
-
-        num_outside = 0
-
-        # If the extreme points are not positioned in a way
-        # that they could be our sand, mark them differently
-        if lftx < bbox.bbl:
-            text_color = (50, 50, 200)
-            lftcolor = (50, 50, 200)
-            sand_box = False
-            num_outside += 1
-
-        if rgtx > bbox.bbr:
-            text_color = (50, 50, 200)
-            rgtcolor = (50, 50, 200)
-            sand_box = False
-            num_outside += 1
-
-        if topy < bbox.bbt:
-            text_color = (50, 50, 200)
-            topcolor = (50, 50, 200)
-            sand_box = False
-            num_outside += 1
-
-        if boty > bbox.bbb:
-            text_color = (50, 50, 200)
-            botcolor = (50, 50, 200)
-            sand_box = False
-            num_outside += 1
-
-        if num_outside > 1:
+        if oob(lftx, rgtx, topy, boty, bbox):
             continue
 
         if sand_box is True:
@@ -164,33 +147,33 @@ def find_sand(img, dilated, contours, width, height, minarea, bbox):
             print(colors.GREEN +
                   "Found sand at ({}, {})".format(lftx, topy))
             cv2.line(img, (int((lftx + rgtx) / 2), topy),
-                     (int((lftx + rgtx) / 2), boty), text_color, 5)
+                     (int((lftx + rgtx) / 2), boty), (50, 200, 50), 5)
 
-        cv2.circle(img, lftp, 25, lftcolor, 5)
-        cv2.circle(img, rgtp, 25, rgtcolor, 5)
-        cv2.circle(img, topp, 25, topcolor, 5)
-        cv2.circle(img, botp, 25, botcolor, 5)
+        cv2.circle(img, lftp, 25, (50, 200, 50), 5)
+        cv2.circle(img, rgtp, 25, (50, 200, 50), 5)
+        cv2.circle(img, topp, 25, (50, 200, 50), 5)
+        cv2.circle(img, botp, 25, (50, 200, 50), 5)
 
-        cv2.drawContours(img, [box.astype("int")], -1, text_color, 2)
+        cv2.drawContours(img, [box.astype("int")], -1, (50, 200, 50), 2)
 
-        cv2.drawContours(dilated, [box.astype("int")], -1, text_color, 2)
+        cv2.drawContours(dilated, [box.astype("int")], -1, (50, 200, 50), 2)
 
         # draw the object sizes on the image
         cv2.putText(img, "w: {:.1f}px".format(boxw),
                     (int(rgtx + 15), int(boty + 15)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, text_color, 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (50, 200, 50), 2)
 
         cv2.putText(img, "h: {:.1f}px".format(boxh),
                     (int(rgtx + 15), int(boty)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, text_color, 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (50, 200, 50), 2)
 
         cv2.putText(dilated, "w: {:.1f}px".format(boxw),
                     (int(rgtx + 15), int(boty + 15)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, text_color[::-1], 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (50, 200, 50), 2)
 
         cv2.putText(dilated, "h: {:.1f}px".format(boxh),
                     (int(rgtx + 15), int(boty)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, text_color[::-1], 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (50, 200, 50), 2)
 
     sand_w = sand_p2[0] - sand_p1[0]
     sand_h = sand_p2[1] - sand_p1[1]
@@ -266,7 +249,7 @@ class Clock():
         edgemap = edge_detect(threshed)
         contours = find_contours(edgemap)
         img, edgemap, sandh, sandw = find_sand(img, edgemap, contours,
-                                               self.width, self.height,
+                                               (self.width, self.height),
                                                self.__minarea,
                                                self.bbox)
         self.sand_h = sandh
