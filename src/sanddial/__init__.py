@@ -6,7 +6,7 @@ off control of the program to the other modules.
 import signal
 import sys
 from sanddial import err
-from sanddial import clock
+from sanddial import imgproc
 
 
 def graceful_exit(sig, frame):
@@ -18,7 +18,7 @@ def graceful_exit(sig, frame):
 signal.signal(signal.SIGINT, graceful_exit)
 err.log('Press Ctrl+C when done with clock.')
 
-clock.main()
+imgproc.main()
 
 # if should_turn:
 #     minute += 1

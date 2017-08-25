@@ -158,7 +158,7 @@ def find_sand(img, dilated, contours, dims, bbox):
     return img, dilated, sand_p2.x - sand_p1.x, sand_p2.y - sand_p1.y
 
 
-class Clock():
+class ImageProcessor():
 
     def __init__(self, width, height, channels):
         # Generate plot for drawing our figures
@@ -197,7 +197,7 @@ class Clock():
         self.input_img = img
 
     # Perform image analysis
-    def tick(self):
+    def analyze(self):
         img = self.input_img
 
         # Upper and lower bounds for colors used in thresholding
@@ -214,7 +214,7 @@ class Clock():
         contours = find_contours(edgemap)
         img, edgemap, sandh, sandw = find_sand(img, edgemap, contours,
                                                self.dims, self.bbox)
-        self.sand_dims = (sandw, sandh)
+        self.sand_dims = Point(sandw, sandh)
 
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
@@ -234,8 +234,8 @@ class Clock():
 
 
 def main():
-    # Initialize a clock for the correct image dimensions
-    clock = Clock(2268, 4032, 3)
+    # Initialize an image processor for the correct image dimensions
+    imgproc = ImageProcessor(2268, 4032, 3)
     # Loop over the set of test images, displaying the output for each one
     for i in range(1, 28):
         # Prefix the test images with a '0' if they are one digit
@@ -244,5 +244,5 @@ def main():
             strnum = '0' + strnum
         # Read the image from the file and begin our processing
         img = cv2.imread('../img/test' + strnum + '.jpg')
-        clock.load_img(img)
-        clock.tick()
+        imgproc.load_img(img)
+        imgproc.analyze()
