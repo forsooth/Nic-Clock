@@ -47,7 +47,7 @@ class SandDial():
         self.cam = camera.Camera()
 
         # Initialize image processor
-        height, width = self.cam.get_width(), self.cam.get_height()
+        width, height = self.cam.get_width(), self.cam.get_height()
         self.processor = imgproc.ImageProcessor(width, height)
 
         self.servo = servo.Servo()
@@ -65,7 +65,7 @@ class SandDial():
 
     def print_time(self):
         """Output the current time to the terminal."""
-        print(str(self.hour) + ':' + print(self.minute))
+        print(str(self.hour) + ':' + str(self.minute))
 
     def run(self):
         """Loop until the user quits with SIGINT, grabbing images from the
@@ -101,3 +101,4 @@ class SandDial():
                     if self.hour >= 24:
                         self.hour = 0
                 self.print_time()
+

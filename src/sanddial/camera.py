@@ -6,7 +6,7 @@ from sanddial import err
 
 # Standard height and width values for pictures the camera should take,
 # measured in pixels.
-IMG_WIDTH = 480
+IMG_WIDTH =  480
 IMG_HEIGHT = 640
 
 
