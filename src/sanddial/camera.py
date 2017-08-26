@@ -4,6 +4,11 @@ import numpy as np
 import picamera
 from sanddial import err
 
+# Standard height and width values for pictures the camera should take,
+# measured in pixels.
+IMG_WIDTH = 480
+IMG_HEIGHT = 640
+
 
 class Camera():
     """Maintains an instance of the Raspberry Pi Camera library's camera
@@ -15,8 +20,8 @@ class Camera():
         """Initializes camera settings, and creates the camera object"""
 
         # frame size properties
-        self.width = 480
-        self.height = 640
+        self.width = IMG_WIDTH
+        self.height = IMG_HEIGHT
 
         # Note that the number of channels should not be changed, as OpenCV
         # immutably requires 3 channels (BGR) for color processing.
@@ -48,10 +53,6 @@ class Camera():
     def get_height(self):
         """Fetches the frame height."""
         return self.height
-
-    def get_channels(self):
-        """Fetches the number of color channels."""
-        return self.channels
 
     def get_frame(self):
         """Fetches a new frame from the camera, and returns it as a

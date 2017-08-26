@@ -2,17 +2,18 @@
 clock. the expected main functionality is to load an image, then analyze it,
 and repeat until desired to tell the time.
 """
+import os
 import math
 from collections import namedtuple
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
-from sanddial import colors
 from sanddial import err
 
 MIN_AREA_P = 0.000025
 OVERLAY_COLOR = (80, 0, 0)
 SUCCESS_COLOR = (50, 200, 50)
+CHANNELS = 3
 
 BoundingBox = namedtuple('BoundingBox', 'bbt bbb bbl bbr')
 Point = namedtuple('Point', 'x y')
@@ -222,8 +223,7 @@ def find_objs(img, dilated, contours, dims, bbox):
                 sand_p2 = Point(sand_p2.x, botp.y)
             if sand_p1.x > topp.y:
                 sand_p1 = Point(sand_p1.x, topp.y)
-            print(colors.GREEN +
-                  "Found sand at ({}, {})".format(lftp.x, topp.y))
+            err.success("Found sand at ({}, {})".format(lftp.x, topp.y))
             cv2.line(img, (int((lftp.x + rgtp.x) / 2), topp.y),
                      (int((lftp.x + rgtp.x) / 2), botp.y), SUCCESS_COLOR, 5)
 
@@ -266,7 +266,7 @@ class ImageProcessor():
     accessors for sand_width and sand_height may be called.
     """
 
-    def __init__(self, width, height, channels):
+    def __init__(self, width, height):
         """Generates a plot on which to output the image processing information
         as well as initializing blank images, setting simple class attributes,
         setting the expected values for the bounding box, and displaying
@@ -275,10 +275,6 @@ class ImageProcessor():
         Args:
             width: the width of the image, in pixels
             height: the height of the image, in pixels
-            channels: the number of channels in the image; note that this
-                      is mostly maintained as a potential future path for
-                      development, as all images as expected to have three
-                      channels.
         """
 
         # Generate plot for drawing our figures
@@ -291,8 +287,8 @@ class ImageProcessor():
 
         # This plot holds a color image; its array is w*h*c
         plt.subplot2grid((1, 2), (0, 0))
-        emptyim = np.empty((width * height * channels),
-                           dtype=np.uint8).reshape((height, width, channels))
+        emptyim = np.empty((width * height * CHANNELS),
+                           dtype=np.uint8).reshape((height, width, CHANNELS))
         self.leftimg = plt.imshow(emptyim.copy(), animated=True)
 
         # This plot holds a grayscale image; its array is w*h
@@ -356,9 +352,8 @@ class ImageProcessor():
         # OpenCV uses BGR, so convert to RGB for viewing
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-        print(colors.GREEN +
-              "Found width and height of sand: {}px by {}px"
-              .format(self.sand_dims.x, self.sand_dims.y))
+        err.success("Found width and height of sand: {}px by {}px"
+                    .format(self.sand_dims.x, self.sand_dims.y))
 
         # Reset the matplotlib axes' data, and redraw them
         self.leftimg.set_data(img)
@@ -368,7 +363,7 @@ class ImageProcessor():
         plt.pause(0.1)
 
         # Return true or false based on whether any sand was detected.
-        if self.sand_dims.x == 0 or self.sand_dims.y == 0:
+        if self.sand_dims.x <= 0 or self.sand_dims.y <= 0:
             return True
         return False
 
@@ -379,7 +374,9 @@ def test():
     """
 
     # Initialize an image processor for the correct image dimensions
-    imgproc = ImageProcessor(2268, 4032, 3)
+    imgproc = ImageProcessor(2268, 4032)
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+
     # Loop over the set of test images, displaying the output for each one
     for i in range(1, 28):
         # Prefix the test images with a '0' if they are one digit
@@ -387,6 +384,6 @@ def test():
         if len(strnum) == 1:
             strnum = '0' + strnum
         # Read the image from the file and begin our processing
-        img = cv2.imread('../img/test' + strnum + '.jpg')
+        img = cv2.imread(dir_path + '../../img/test' + strnum + '.jpg')
         imgproc.load_img(img)
         imgproc.analyze()

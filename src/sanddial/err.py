@@ -6,7 +6,6 @@ from sanddial import colors
 
 NL = '\n'
 
-
 def err(msg=""):
     """Prints a fatal error in red, then exits the program."""
     sys.stderr.write(colors.RED + str(msg) + colors.NONE + NL)
@@ -21,3 +20,7 @@ def warn(msg=""):
 def log(msg=""):
     """Prints an informational message in blue."""
     sys.stderr.write(colors.BLUE + str(msg) + colors.NONE + NL)
+
+def success(msg=""):
+    """Prints a notification of a success in green."""
+    sys.stderr.write(colors.GREEN + str(msg) + colors.NONE + NL)
