@@ -1,3 +1,7 @@
+"""This module performs the core image processing routine for the sanddial
+clock. the expected main functionality is to load an image, then analyze it,
+and repeat until desired to tell the time.
+"""
 import math
 import time
 from collections import namedtuple
@@ -15,18 +19,47 @@ BoundingBox = namedtuple('BoundingBox', 'bbt bbb bbl bbr')
 Point = namedtuple('Point', 'x y')
 
 
-# Find the midpoint between two points (average the X and Y)
 def midpoint(ptA, ptB):
-    return ((ptA.x + ptB.x) * 0.5, (ptA.y + ptB.y) * 0.5)
+    """Find the midpoint between two points, i.e. average their
+    x and y coordinates.
+
+    Args:
+        ptA: the first of the two Points
+        ptB: the second of the two Points
+
+    Returns:
+        The midpoint between the two points, with x and y as integers
+    """
+    return (int((ptA.x + ptB.x) * 0.5), int((ptA.y + ptB.y) * 0.5))
 
 
 def dist(ptA, ptB):
+    """Calculate the distance between two points, by taking the differences
+    in their x and y coordinates and using the Pythagorean theorem.
+
+    Args:
+        ptA: the source Point
+        ptB: the destination Point
+
+    Returns: the distance between the two points as an integer
+    """
     dx = ptA.x - ptB.x
     dy = ptA.y - ptB.y
-    return math.sqrt(dx ** 2 + dy ** 2)
+    return int(math.sqrt(dx ** 2 + dy ** 2))
 
 
 def threshold(img, boundaries):
+    """Given an image and a list of boundaries, uses each pair of boundaries
+    in the list to perform successive thresholdings, leaving all pixels not
+    in the threshold range black.
+
+    Args:
+        img: the color OpenCV image on which to perform the thresholding
+        boundaries: a list of tuples containing lower and upper bounds for
+                    the thresholding in that order
+
+    Returns: the thresholded image
+    """
     threshed = img.copy()
     for (lower, upper) in boundaries:
         lower = np.array(lower, dtype="uint8")
@@ -37,6 +70,15 @@ def threshold(img, boundaries):
 
 
 def edge_detect(img):
+    """Given an image, performs an edge detection on that image.
+
+    Args:
+        img: the color OpenCV image on which edges are to be detected
+
+    Returns: the grayscale edgemap image created from the edge detection
+             process
+    """
+
     err.log("Taking blurred image edge detection")
     blurred = cv2.GaussianBlur(img.copy(), (21, 21), 0)
 
@@ -52,15 +94,35 @@ def edge_detect(img):
 
 
 def find_contours(img):
-    # find contours in the edge map
-    contours = cv2.findContours(img.copy(), cv2.RETR_EXTERNAL,
-                                cv2.CHAIN_APPROX_SIMPLE)
-    contours = contours[1]
+    """Given an edge map, performs a Canny contour finding algorithm and
+    returns the result.
 
+    Args:
+        img: the grayscale OpenCV edgemap image on which to perform the
+             contour detection
+
+    Returns:
+        a list of OpenCV countours contained in the image
+    """
+    contours = cv2.findContours(img.copy(), cv2.RETR_EXTERNAL,
+                                cv2.CHAIN_APPROX_SIMPLE)[1]
     return contours
 
 
 def draw_bbox(img, dims, bbox):
+    """Given an image, the dimensions of that image, and a bounding box
+    representing the four points of a rectangle within the bounds of that
+    image, draw a gray overlay over the image everywhere except within the
+    bounding box.
+
+    Args:
+        img: the color OpenCV image to overlay with the bounding box
+        dims: the Point representing the width and height of the image
+        bbox: the BoundingBox representing the found points of interest
+
+    Returns: the new overlaid image.
+    """
+
     overlay = img.copy()
     width, height = dims
     cv2.rectangle(overlay, (0, 0), (width, bbox.bbt), OVERLAY_COLOR, -1)
@@ -72,8 +134,19 @@ def draw_bbox(img, dims, bbox):
 
 
 def oob(lftx, rgtx, topy, boty, bbox):
-    # If the extreme points are not positioned in a way
-    # that they could be our sand, mark them differently
+    """Given four points of extremum and a bounding box, tell whether any
+    of the points are out of bounds.
+
+    Args:
+        lftx: the x value of the leftmost point
+        rgtx: the x value of the rightmost point
+        topy: the y value of the topmost point
+        boty: the y value of the bottommost point
+        bbox: the BoundingBox determining which points should be considered
+              'in bounds' and 'out of bounds'
+
+    Returns: True if any points are out of bounds, and False otherwise
+    """
     if lftx < bbox.bbl:
         return True
     if rgtx > bbox.bbr:
@@ -85,7 +158,33 @@ def oob(lftx, rgtx, topy, boty, bbox):
     return False
 
 
-def find_sand(img, dilated, contours, dims, bbox):
+def find_objs(img, dilated, contours, dims, bbox):
+    """Given an image, an edgemap of that image, a set of contours in that
+    image over which we should iterate, the dimensions of that image, and
+    a bounding box of interest, iterate over the countours and find any
+    which fit in the bounding box. Return the width and height of any objects
+    in the bounding box as determined by the extrema of contours in the region,
+    as well as modified versions of the images.
+
+    Args:
+        img: the color OpenCV image on which to operate
+        dilated: the grayscale OpenCV edgemap image from which the countours
+                 were derived
+        contours: a list of OpenCV contours found in the image
+        dims: the dimensions of the images in question
+        bbox: a BoundingBox representing an area of interest outside of which
+              any contours should be ignored
+
+    Returns: a tuple containing the following:
+        a modified version of img with an overlay showing the bounding box
+            and a highlight of any objects within the bounding box,
+            as well as their extrema and dimensions (labeled on image)
+        a modified version of dilated with the same modifications
+        the width of any objects determined by taking the difference of the
+            furthest right point of any contour in the bounding box and the
+            furthest left point of any contour in the bounding box
+        the height of any objects determined in the same way
+    """
     sand_p1 = dims
     sand_p2 = Point(0, 0)
 
@@ -159,8 +258,30 @@ def find_sand(img, dilated, contours, dims, bbox):
 
 
 class ImageProcessor():
+    """This object defines an image processor which uses the above operations
+    to detect sand in an image of an hourglass. It maintains state in the form
+    of images, dimensions, etc. and is expected to be used for multiple runs
+    over which the dimensions stay the same, e.g. a feed of images from a
+    camera. Hence the expectation is a loop over which images are repeatedly
+    added with load_image and then analyzed with analyze, after which the
+    accessors for sand_width and sand_height may be called.
+    """
 
     def __init__(self, width, height, channels):
+        """Generates a plot on which to output the image processing information
+        as well as initializing blank images, setting simple class attributes,
+        setting the expected values for the bounding box, and displaying
+        the initial plot.
+
+        Args:
+            width: the width of the image, in pixels
+            height: the height of the image, in pixels
+            channels: the number of channels in the image; note that this
+                      is mostly maintained as a potential future path for
+                      development, as all images as expected to have three
+                      channels.
+        """
+
         # Generate plot for drawing our figures
         plt.ion()
         self.__plt = plt.figure()
@@ -194,10 +315,24 @@ class ImageProcessor():
         plt.show()
 
     def load_img(self, img):
+        """Load a new image into the image processor.
+
+        Args:
+            img: the color OpenCV image to load for processing.
+        """
         self.input_img = img
 
-    # Perform image analysis
     def analyze(self):
+        """Perform a series of image processing operations on the most recently
+        loaded image for the purpose of detecting the location of objects in
+        a given range, in particular sand in an hourglass (though the module
+        could certainly be ported to other uses with minor modifications to
+        constants), and then setting the dimensions of those objects in pixels.
+
+        Returns: False if no objects were detected in the bounding box, True
+        otherwise.
+        """
+
         img = self.input_img
 
         # Upper and lower bounds for colors used in thresholding
@@ -209,31 +344,42 @@ class ImageProcessor():
         err.log("Running threshold with lower limit {}, upper limit {}"
                 .format(lbound, ubound))
 
+        # perform some image processing operations
         threshed = threshold(img, boundaries)
         edgemap = edge_detect(threshed)
         contours = find_contours(edgemap)
-        img, edgemap, sandh, sandw = find_sand(img, edgemap, contours,
+        img, edgemap, sandh, sandw = find_objs(img, edgemap, contours,
                                                self.dims, self.bbox)
+        # set the dimensions of the sand that we gained from finding objects
+        # within our bounding box.
         self.sand_dims = Point(sandw, sandh)
 
+        # OpenCV uses BGR, so convert to RGB for viewing
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
         print(colors.GREEN +
               "Found width and height of sand: {}px by {}px"
               .format(self.sand_dims.x, self.sand_dims.y))
+
+        # Reset the matplotlib axes' data, and redraw them
         self.leftimg.set_data(img)
         self.rightimg.set_data(edgemap)
-
         plt.draw()
+        # This wait is necessary to allow the frames to update
         plt.pause(0.1)
         time.sleep(0.1)
 
+        # Return true or false based on whether any sand was detected.
         if self.sand_dims.x == 0 or self.sand_dims.y == 0:
             return True
         return False
 
 
-def main():
+def test():
+    """Perform a test run of the image processor suite of utilities on the
+    expected test image files of an hourglass.
+    """
+
     # Initialize an image processor for the correct image dimensions
     imgproc = ImageProcessor(2268, 4032, 3)
     # Loop over the set of test images, displaying the output for each one

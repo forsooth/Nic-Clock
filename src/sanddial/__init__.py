@@ -18,7 +18,7 @@ def graceful_exit(sig, frame):
 signal.signal(signal.SIGINT, graceful_exit)
 err.log('Press Ctrl+C when done with clock.')
 
-imgproc.main()
+imgproc.test()
 
 # if should_turn:
 #     minute += 1
