@@ -329,7 +329,7 @@ class ImageProcessor():
         """
 
         img = self.input_img
-
+        cv2.imshow('ddd', img)
         # Upper and lower bounds for colors used in thresholding
         boundaries = [([30, 60, 60], [100, 250, 250])]
 
@@ -387,3 +387,4 @@ def test():
         img = cv2.imread(dir_path + '../../img/test' + strnum + '.jpg')
         imgproc.load_img(img)
         imgproc.analyze()
+
