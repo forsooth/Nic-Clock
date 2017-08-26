@@ -63,6 +63,7 @@ class Camera():
                          dtype=np.uint8)
 
         self.camera.capture(frame, 'bgr')
+        # Reshaping requires width and height reversed
         frame = frame.reshape((self.height, self.width, self.channels))
 
         return frame

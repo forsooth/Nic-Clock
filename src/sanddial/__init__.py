@@ -8,6 +8,7 @@ import datetime
 from sanddial import err
 from sanddial import imgproc
 from sanddial import camera
+from sanddial import servo
 
 # Number of frames for which we should double check that there is no sand
 # in the image before turning the servo
@@ -48,6 +49,8 @@ class SandDial():
         # Initialize image processor
         height, width = self.cam.get_width(), self.cam.get_height()
         self.processor = imgproc.ImageProcessor(width, height)
+
+        self.servo = servo.Servo()
 
         self.strikes = 0
 
@@ -91,6 +94,7 @@ class SandDial():
             if self.strikes >= MAX_STRIKES:
                 self.strikes = 0
                 self.minute += 1
+                self.servo.flip()
                 if self.minute >= 60:
                     self.minute = 0
                     self.hour += 1
