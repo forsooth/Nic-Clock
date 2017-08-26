@@ -37,6 +37,11 @@ class SandDial():
         # Register response to interrupt signal
         signal.signal(signal.SIGINT, graceful_exit)
 
+        err.log("Press Enter when physical setup of camera, computer, and " +
+                "servo is complete and configuration of camera settings " +
+                "(e.g. white balance) may commence.")
+        input()
+
         # Initialize camera
         self.cam = camera.Camera()
 
