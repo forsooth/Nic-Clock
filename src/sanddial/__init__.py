@@ -7,7 +7,7 @@ import signal
 import sys
 from sanddial import err
 from sanddial import imgproc
-
+from sanddial import camera
 
 def graceful_exit(sig, frame):
     """Handle Ctrl+C signal to cancel execution without a Python stack trace"""
@@ -18,7 +18,15 @@ def graceful_exit(sig, frame):
 signal.signal(signal.SIGINT, graceful_exit)
 err.log('Press Ctrl+C when done with clock.')
 
-imgproc.test()
+cam = camera.Camera()
+processor = imgproc.ImageProcessor(cam.get_width(), cam.get_height(), cam.get_channels())
+while True:
+    frame = cam.get_frame()
+    processor.load_img(frame)
+    processor.analyze()
+    print(processor.sand_dims)
+
+# imgproc.test()
 
 # if should_turn:
 #     minute += 1

@@ -3,7 +3,6 @@ clock. the expected main functionality is to load an image, then analyze it,
 and repeat until desired to tell the time.
 """
 import math
-import time
 from collections import namedtuple
 import numpy as np
 import matplotlib.pyplot as plt
@@ -88,7 +87,7 @@ def edge_detect(img):
     edged = cv2.Canny(blurred.copy(), 50, 100)
 
     err.log("Dilating edges")
-    dilated = cv2.dilate(edged.copy(), None, iterations=5)
+    dilated = cv2.dilate(edged.copy(), None, iterations=1)
 
     return dilated
 
@@ -367,7 +366,6 @@ class ImageProcessor():
         plt.draw()
         # This wait is necessary to allow the frames to update
         plt.pause(0.1)
-        time.sleep(0.1)
 
         # Return true or false based on whether any sand was detected.
         if self.sand_dims.x == 0 or self.sand_dims.y == 0:

@@ -15,8 +15,8 @@ class Camera():
         """Initializes camera settings, and creates the camera object"""
 
         # frame size properties
-        self.width = 640
-        self.height = 480
+        self.width = 480
+        self.height = 640
 
         # Note that the number of channels should not be changed, as OpenCV
         # immutably requires 3 channels (BGR) for color processing.
@@ -62,6 +62,6 @@ class Camera():
                          dtype=np.uint8)
 
         self.camera.capture(frame, 'bgr')
-        frame = frame.reshape((self.width, self.height, self.channels))
+        frame = frame.reshape((self.height, self.width, self.channels))
 
         return frame
