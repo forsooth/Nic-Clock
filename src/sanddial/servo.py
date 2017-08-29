@@ -1,4 +1,5 @@
 import wiringpi
+from time import sleep
 
 GPIO_PIN = 18
 
@@ -18,17 +19,20 @@ class Servo():
         wiringpi.pwmSetClock(192)
         wiringpi.pwmSetRange(2000)
 
-        self.pulse = 100
-        self.zero_pulse = 10
-        self.reset_pulse = 102
-        self.flipped_pulse = 195
+        self.pulse = 135
+        self.zero_pulse = 48
+        self.reset_pulse = 135
+        self.flipped_pulse = 225
         self.reset()
 
     def flip(self):
         if self.pulse > self.zero_pulse:
             wiringpi.pwmWrite(GPIO_PIN, self.zero_pulse)
+            self.pulse = self.zero_pulse
         elif self.pulse < self.flipped_pulse:
             wiringpi.pwmWrite(GPIO_PIN, self.flipped_pulse)
+            self.pulse = self.flipped_pulse
+        sleep(2)
 
     def reset(self):
         wiringpi.pwmWrite(GPIO_PIN, self.reset_pulse)

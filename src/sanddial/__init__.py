@@ -5,6 +5,7 @@ off control of the program to the other modules.
 import signal
 import sys
 import datetime
+import time
 from sanddial import err
 from sanddial import imgproc
 from sanddial import camera
@@ -61,11 +62,11 @@ class SandDial():
         self.minute = self.init_t.minute + round(self.init_t.second / 100)
         self.hour = self.init_t.hour
 
-        self.print_time()
 
-    def print_time(self):
-        """Output the current time to the terminal."""
-        print(str(self.hour) + ':' + str(self.minute))
+    def time_string(self):
+        if self.minute < 10:
+            return str(self.hour) + ":0" + str(self.minute)
+        return str(self.hour) + ":" + str(self.minute)
 
     def run(self):
         """Loop until the user quits with SIGINT, grabbing images from the
@@ -81,13 +82,18 @@ class SandDial():
             # Load the image into the image processor
             self.processor.load_img(frame)
             # Determine whether the servo should turn for this frame
-            should_turn = self.processor.analyze()
+            should_turn = self.processor.analyze(self.time_string())
 
             # When there is no sand left in the hourglass, we want to
             # make sure there really isn't any left by waiting for a couple
             # of images to corroborate the result
             if should_turn is True:
+                err.warn("Strike against current configuration detected: "
+                         + str(self.strikes))
                 self.strikes += 1
+            else:
+	        # If we do detect sand again, reset the strike counter
+                self.strikes = 0
 
             # If we are in fact certain that there isn't any sand, then we
             # want to change our timer.
@@ -100,5 +106,4 @@ class SandDial():
                     self.hour += 1
                     if self.hour >= 24:
                         self.hour = 0
-                self.print_time()
 

@@ -130,7 +130,10 @@ def draw_bbox(img, dims, bbox):
     cv2.rectangle(overlay, (bbox.bbr, 0), (width, height), OVERLAY_COLOR, -1)
     cv2.rectangle(overlay, (0, bbox.bbb), (width, height), OVERLAY_COLOR, -1)
 
-    cv2.addWeighted(overlay, 0.25, img, 0.75, 0, img)
+    cv2.addWeighted(overlay, 0.33, img, 0.66, 0, img)
+    cv2.rectangle(img, (bbox.bbl, bbox.bbt), (bbox.bbr, bbox.bbb), OVERLAY_COLOR, 2)
+
+    return img
 
 
 def oob(lftx, rgtx, topy, boty, bbox):
@@ -188,7 +191,7 @@ def find_objs(img, dilated, contours, dims, bbox):
     sand_p1 = dims
     sand_p2 = Point(0, 0)
 
-    draw_bbox(img, dims, bbox)
+    img = draw_bbox(img, dims, bbox)
 
     for contour in contours:
         # If the area contained in the contour is too small
@@ -227,23 +230,14 @@ def find_objs(img, dilated, contours, dims, bbox):
             cv2.line(img, (int((lftp.x + rgtp.x) / 2), topp.y),
                      (int((lftp.x + rgtp.x) / 2), botp.y), SUCCESS_COLOR, 5)
 
-        cv2.circle(img, lftp, 25, SUCCESS_COLOR, 5)
-        cv2.circle(img, rgtp, 25, SUCCESS_COLOR, 5)
-        cv2.circle(img, topp, 25, SUCCESS_COLOR, 5)
-        cv2.circle(img, botp, 25, SUCCESS_COLOR, 5)
+        cv2.circle(img, lftp, 5, SUCCESS_COLOR, 2)
+        cv2.circle(img, rgtp, 5, SUCCESS_COLOR, 2)
+        cv2.circle(img, topp, 5, SUCCESS_COLOR, 2)
+        cv2.circle(img, botp, 5, SUCCESS_COLOR, 2)
 
         cv2.drawContours(img, [box.astype("int")], -1, SUCCESS_COLOR, 2)
 
         cv2.drawContours(dilated, [box.astype("int")], -1, SUCCESS_COLOR, 2)
-
-        # draw the object sizes on the image
-        cv2.putText(img, "w: {:.1f}px".format(boxw),
-                    (int(rgtp.x + 15), int(botp.y + 15)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, SUCCESS_COLOR, 2)
-
-        cv2.putText(img, "h: {:.1f}px".format(boxh),
-                    (int(rgtp.x + 15), int(botp.y)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, SUCCESS_COLOR, 2)
 
         cv2.putText(dilated, "w: {:.1f}px".format(boxw),
                     (int(rgtp.x + 15), int(botp.y + 15)),
@@ -253,7 +247,7 @@ def find_objs(img, dilated, contours, dims, bbox):
                     (int(rgtp.x + 15), int(botp.y)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.65, SUCCESS_COLOR, 2)
 
-    return img, dilated, sand_p2.x - sand_p1.x, sand_p2.y - sand_p1.y
+    return img, dilated, abs(sand_p2.x - sand_p1.x), abs(sand_p1.y - sand_p2.y)
 
 
 class ImageProcessor():
@@ -286,23 +280,34 @@ class ImageProcessor():
         self.input_img = None
 
         # This plot holds a color image; its array is w*h*c
-        plt.subplot2grid((1, 2), (0, 0))
+        plt.subplot2grid((1, 3), (0, 0))
         emptyim = np.empty((width * height * CHANNELS),
                            dtype=np.uint8).reshape((height, width, CHANNELS))
         self.leftimg = plt.imshow(emptyim.copy(), animated=True)
+        self.leftimg.axes.get_xaxis().set_visible(False)
+        self.leftimg.axes.get_yaxis().set_visible(False)
 
         # This plot holds a grayscale image; its array is w*h
-        plt.subplot2grid((1, 2), (0, 1))
+        plt.subplot2grid((1, 3), (0, 1))
         emptyim = np.empty((width * height),
                            dtype=np.uint8).reshape((height, width))
         self.rightimg = plt.imshow(emptyim.copy(), animated=True)
+        self.rightimg.axes.get_xaxis().set_visible(False)
+        self.rightimg.axes.get_yaxis().set_visible(False)
+
+        plt.subplot2grid((1, 3), (0, 2))
+        emptyim = np.empty((width * height * CHANNELS),
+                           dtype=np.uint8).reshape((height, width, CHANNELS))
+        self.timeimg = plt.imshow(emptyim.copy(), animated=True)
+        self.timeimg.axes.get_xaxis().set_visible(False)
+        self.timeimg.axes.get_yaxis().set_visible(False)
 
         self.sand_dims = Point(0, 0)
 
-        bbt = int(height / 2 - 0.10 * height)
-        bbb = int(height / 2 + 0.10 * height)
-        bbl = int(width / 2 - 0.20 * width)
-        bbr = int(width / 2 + 0.20 * width)
+        bbt = int(height / 2 - 0.20 * height)
+        bbb = int(height / 2 + 0.15 * height)
+        bbl = int(width / 2 - 0.10 * width)
+        bbr = int(width / 2 + 0.25 * width)
 
         # set bounding box for sand
         self.bbox = BoundingBox(bbt, bbb, bbl, bbr)
@@ -317,7 +322,7 @@ class ImageProcessor():
         """
         self.input_img = img
 
-    def analyze(self):
+    def analyze(self, timestr):
         """Perform a series of image processing operations on the most recently
         loaded image for the purpose of detecting the location of objects in
         a given range, in particular sand in an hourglass (though the module
@@ -329,9 +334,8 @@ class ImageProcessor():
         """
 
         img = self.input_img
-        cv2.imshow('ddd', img)
         # Upper and lower bounds for colors used in thresholding
-        boundaries = [([30, 60, 60], [100, 250, 250])]
+        boundaries = [([0, 100, 130], [60, 240, 240])]
 
         # Convert threshold boundary colors to printable hex codes
         lbound = '#' + ''.join(map(hex, boundaries[0][0])).replace('0x', '')
@@ -354,16 +358,29 @@ class ImageProcessor():
 
         err.success("Found width and height of sand: {}px by {}px"
                     .format(self.sand_dims.x, self.sand_dims.y))
+        
+        timeimg = np.empty((self.dims.x * self.dims.y * CHANNELS),
+                           dtype=np.uint8).reshape((self.dims.x, self.dims.y, CHANNELS))
+        timeimg.fill(255)
 
-        # Reset the matplotlib axes' data, and redraw them
+        cv2.putText(timeimg, timestr,
+                    (int(0.35 * self.dims.x), int(0.45 * self.dims.y)),
+                    cv2.FONT_HERSHEY_COMPLEX, 4, (0, 0, 0), 15)
+
+        cv2.putText(timeimg, timestr,
+                    (int(0.35 * self.dims.x), int(0.45 * self.dims.y)),
+                    cv2.FONT_HERSHEY_COMPLEX, 4, (236, 236, 80), 6)
+
+	# Reset the matplotlib axes' data, and redraw them
         self.leftimg.set_data(img)
         self.rightimg.set_data(edgemap)
+        self.timeimg.set_data(timeimg)
         plt.draw()
         # This wait is necessary to allow the frames to update
         plt.pause(0.1)
 
         # Return true or false based on whether any sand was detected.
-        if self.sand_dims.x <= 0 or self.sand_dims.y <= 0:
+        if self.sand_dims.x >= self.dims.x or self.sand_dims.y >= self.dims.y:
             return True
         return False
 

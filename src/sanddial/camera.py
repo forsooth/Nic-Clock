@@ -30,7 +30,7 @@ class Camera():
         self.camera = picamera.PiCamera(resolution=(self.width, self.height))
 
         self.camera.iso = 100
-
+        self.camera.zoom = (0.25, 0.25, 0.5, 0.5)
         # We wait five seconds before setting the white balance so that
         # the camera has time to auto-adjust.
         err.log("Initializing camera white balance — sleeping for 5 seconds.")
